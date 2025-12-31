@@ -1,1 +1,2 @@
 data/usa_county_wise.csv filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
