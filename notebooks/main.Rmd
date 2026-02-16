@@ -129,3 +129,18 @@ ggplot(day_wise_data, aes(date, recovered)) +
   )
 ```
 
+
+```{r}
+ggplot(country_data,
+       aes(confirmed, deaths,
+           size = active,
+           color = who_region)) +
+  geom_point(alpha = 0.7) +
+  scale_size_continuous(range = c(2, 15)) +
+  labs(
+    title = "Confirmed vs Deaths (Bubble size = Active Cases)",
+    x = "Confirmed Cases",
+    y = "Deaths"
+  )
+```
+
