@@ -1,0 +1,131 @@
+---
+title: "COVID-19 Data Analysis"
+author: "By Seyed Rumaiz"
+date: "2026-02-16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(maps)
+library(janitor)
+```
+
+
+```{r}
+complete_data     <- read_csv("../data/covid_19_clean_complete.csv") %>% clean_names()
+day_wise_data     <- read_csv("../data/day_wise.csv") %>% clean_names()
+country_data      <- read_csv("../data/country_wise_latest.csv") %>% clean_names()
+grouped_data      <- read_csv("../data/full_grouped.csv") %>% clean_names()
+worldometer_data  <- read_csv("../data/worldometer_data.csv") %>% clean_names()
+```
+
+```{r}
+day_wise_data <- day_wise_data %>% mutate(date = as.Date(date))
+grouped_data  <- grouped_data  %>% mutate(date = as.Date(date))
+```
+
+
+```{r}
+# Replace blanks with 0
+country_data <- country_data %>% 
+  mutate(across(where(is.numeric), ~replace_na(.x, 0)))
+```
+
+```{r}
+cat("Rows in complete_data:", nrow(complete_data), "\n")
+cat("Rows in day_wise_data:", nrow(day_wise_data), "\n")
+cat("Rows in country_data:", nrow(country_data), "\n")
+cat("Rows in grouped_data:", nrow(grouped_data), "\n")
+cat("Rows in worldometer_data:", nrow(worldometer_data), "\n")
+```
+
+```{r}
+summary(country_data)
+```
+
+
+```{r}
+glimpse(country_data)
+```
+
+```{r}
+colSums(is.na(country_data))
+```
+
+```{r}
+world_map <- map_data("world")
+
+plot_world_map <- function(df, column, title_text) {
+
+  df2 <- df %>%
+    rename(region = country_region) %>%
+    mutate(region = case_when(
+      region == "US" ~ "USA",
+      TRUE ~ region
+    ))
+
+  merged <- left_join(world_map, df2, by = "region")
+
+  ggplot(merged, aes(long, lat, group = group)) +
+    geom_polygon(aes(fill = .data[[column]]), color = "gray40", size = 0.1) +
+    scale_fill_viridis_c(option = "magma", na.value = "gray90") +
+    labs(title = title_text, fill = column) +
+    theme_void()
+}
+```
+
+```{r}
+plot_world_map(country_data, "confirmed", "Global Confirmed Cases")
+```
+
+
+```{r}
+plot_world_map(country_data, "deaths", "Global Deaths")
+```
+
+```{r}
+plot_world_map(country_data, "recovered", "Global Recovered Cases")
+```
+
+```{r}
+plot_world_map(country_data, "active", "Global Active Cases")
+```
+
+
+```{r}
+ggplot(day_wise_data, aes(date, deaths)) +
+  geom_line(color = "purple") +
+  labs(
+    title = "Daily Global Deaths",
+    x = "Date",
+    y = "Deaths"
+  )
+```
+
+```{r}
+ggplot(day_wise_data, aes(date, confirmed)) +
+  geom_line(color = "purple") +
+  labs(
+    title = "Daily Global Confirmed Cases",
+    x = "Date",
+    y = "Confirmed"
+  )
+```
+
+```{r}
+ggplot(day_wise_data, aes(date, recovered)) +
+  geom_line(color = "purple") +
+  labs(
+    title = "Daily Global Recoveries",
+    x = "Date",
+    y = "Recovered"
+  )
+```
+
