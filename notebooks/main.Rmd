@@ -3,6 +3,7 @@ title: "COVID-19 Data Analysis"
 author: "By Seyed Rumaiz"
 date: "2026-02-16"
 output: pdf_document
+always_allow_html: true
 ---
 
 ```{r setup, include=FALSE}
@@ -15,6 +16,10 @@ library(tidyverse)
 library(lubridate)
 library(maps)
 library(janitor)
+library(slider)
+library(scales)
+library(plotly)
+library(countrycode)
 ```
 
 
@@ -142,5 +147,90 @@ ggplot(country_data,
     x = "Confirmed Cases",
     y = "Deaths"
   )
+```
+
+```{r}
+# Calculate the daily new cases and 7-day rolling average
+
+countries_to_compare <- c("US", "India", "Brazil")
+
+daily_cases_df <- grouped_data %>% 
+  arrange(country_region, date) %>% 
+  group_by(country_region) %>% 
+  mutate(
+    daily_cases = confirmed - lag(confirmed),
+    daily_cases = replace_na(daily_cases, 0),
+    daily_cases_7day_avg = slide_dbl(
+      daily_cases,
+      mean,
+      .before = 6,       # Previous 6 days + today
+      .complete = T
+    )
+  ) %>% 
+  ungroup()
+
+daily_waves_plot_df <- daily_cases_df %>% 
+  filter(country_region %in% countries_to_compare) %>% 
+  filter(!is.na(daily_cases_7day_avg))
+
+ggplot(daily_waves_plot_df,
+       aes(x=date, y=daily_cases_7day_avg, color=country_region)) +
+  geom_line(linewidth=1) +
+  scale_y_continuous(labels=comma) +
+    labs(
+    title = "Pandemic Waves: 7-Day Average of Daily New Cases",
+    subtitle = "Comparing infection surges in the US, India, and Brazil",
+    x = "Date",
+    y = "7-Day Average New Cases",
+    color = "Country"
+    ) +
+  theme_minimal()
+```
+
+```{r}
+country_data2 <- country_data %>%
+  mutate(
+    iso3 = countrycode(country_region, origin = "country.name", destination = "iso3c"),
+    iso3 = if_else(country_region %in% c("US", "USA"), "USA", iso3)
+  )
+
+plot_world_choropleth <- function(df, value_col, title_text) {
+  plot_ly(
+    data = df,
+    type = "choropleth",
+    locations = ~iso3,
+    z = df[[value_col]],
+    text = ~paste0(
+      country_region,
+      "<br>", value_col, ": ", scales::comma(df[[value_col]])
+    ),
+    hoverinfo = "text",
+    colorscale = "Magma",
+    marker = list(line = list(color = "white", width = 0.3))
+  ) %>%
+    layout(
+      title = list(text = title_text),
+      geo = list(
+        showframe = FALSE,
+        showcoastlines = TRUE,
+        projection = list(type = "natural earth")
+      )
+    )
+}
+
+plot_world_choropleth(country_data2, "confirmed", "Global Confirmed Cases")
+```
+
+```{r}
+plot_world_choropleth(country_data2, "deaths", "Global Deaths")
+```
+
+
+```{r}
+plot_world_choropleth(country_data2, "recovered", "Global Recovered Cases")
+```
+
+```{r}
+plot_world_choropleth(country_data2, "active", "Global Active Cases")
 ```
 
